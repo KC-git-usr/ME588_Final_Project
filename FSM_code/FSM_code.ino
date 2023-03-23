@@ -8,9 +8,7 @@
   functions calls
 
   TO DO:
-  Verify timer of 2 min
   Verify data type for pins
-  Mimic pause time if e-stopped and resumed?
 
   Author:
   Kumar Ramesh (ramesh64@purdue.edu)
@@ -50,7 +48,7 @@ int FSM_state = STATE_0;
 
 // Variable to hold the 2min timer
 unsigned long time_since_prgm_start = 0;
-unsigned long time_since_SG = 0;
+unsigned long time_at_SG = 0;
 
 // Variable to read virtual input from keyboard
 String input_data;
@@ -118,6 +116,9 @@ void loop() {
         FSM_state = STATE_2;
       } else if(ES == 1) {
         FSM_state = STATE_3;
+      } else if((SG == 1) && (ES == 0) && (EC == 1)) {
+          StayStationary();
+          FSM_state = STATE_1;
       }
     break;
 
@@ -148,7 +149,7 @@ void PrintStatus() {
   Serial.print("FSM_state : "); Serial.println(FSM_state);
   Serial.print("Time : ");
   if(SG)
-    Serial.println(time_since_prgm_start - time_since_SG);
+    Serial.println(time_since_prgm_start - time_at_SG);
   else
     Serial.println(0);
   Serial.println();
@@ -180,7 +181,7 @@ void StartTimer() {
   /*
     Function to start our game timer
   */
-  time_since_SG = millis(); // record curr time to use as reference zero
+  time_at_SG = millis(); // record curr time to use as reference zero
 }
 
 
@@ -188,10 +189,10 @@ void CheckTime() {
   /*
     Function to determine value of variable SG
   */
-    if((time_since_SG > 0) && ((time_since_prgm_start - time_since_SG) >= TIME_LIMIT)) { // exceeding 2 min limit
+    if((time_at_SG > 0) && ((time_since_prgm_start - time_at_SG) >= TIME_LIMIT)) { // exceeding 2 min limit
         SG = 0;
         Serial.println("2 min UP!");
-    } else if((time_since_SG == 0) && (SG == 0)){ // timer not started yet and input SG is still 0
+    } else if((time_at_SG == 0) && (SG == 0)){ // timer not started yet and input SG is still 0
         SG = 0;
     } else { // game started
         SG = 1;
