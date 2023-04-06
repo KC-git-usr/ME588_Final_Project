@@ -101,10 +101,15 @@ void setup() {
 void loop() {
   // Set target position
   int target[NMOTORS];
+  // Straight motion, sinusoidal speed
   target[0] = 750*sin(prevT/1e6);
   target[1] = 750*sin(prevT/1e6);
-  // target[0] = 500;
-  // target[1] = 500;
+  // Straight motion, ramp speedA
+  target[0] = 500;
+  target[1] = 500;
+  // Right turn motion, ramp speed
+  target[0] = 500;
+  target[1] = -500;
   // time difference
   long currT = micros();
   float deltaT = ((float) (currT - prevT)) / (1.0e6);
