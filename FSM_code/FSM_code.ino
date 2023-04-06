@@ -74,7 +74,7 @@ void loop() {
 
   // Function to determine value of variable SG
   time_since_prgm_start = millis();
-  CheckTime();
+  CheckTime();   
 
   switch(FSM_state) {
     case  STATE_0:
@@ -96,6 +96,7 @@ void loop() {
       MoveForward();
       // transition logic
       if((SG == 1) && (ES ==0) && (EC == 0) && (US == 0)) {
+        ResetEncoder();
         FSM_state = STATE_1;
       } else if((SG == 1) && (ES == 0) && (EC == 1) && (US == 1)) {
         StayStationary();  // Stop moving before turning right
@@ -113,10 +114,11 @@ void loop() {
       TurnRight();
       // transition logic
       if((SG == 1) && (ES == 0) && (EC == 0) && (US == 1)) {
+        ResetEncoder();
         FSM_state = STATE_2;
       } else if(ES == 1) {
         FSM_state = STATE_3;
-      } else if((SG == 1) && (ES == 0) && (EC == 1)) {
+      } else if((SG == 1) && (ES == 0) && (EC == 1) && (US == 0)) {
           StayStationary();
           FSM_state = STATE_1;
       }
@@ -197,6 +199,11 @@ void CheckTime() {
     } else { // game started
         SG = 1;
     }
+}
+
+
+void ResetEncoder() {
+  EC = 0; // ?
 }
 
 
