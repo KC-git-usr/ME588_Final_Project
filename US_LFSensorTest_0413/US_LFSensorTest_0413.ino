@@ -28,7 +28,7 @@ void setup() {
 void loop() {
   USDistance();
   LineFollow();
-  delay(500);
+  delay(100);
 
   
 }
