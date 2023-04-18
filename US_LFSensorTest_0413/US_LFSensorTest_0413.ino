@@ -1,8 +1,8 @@
 #include <LiquidCrystal.h>
 
 // defines pins numbers
-const int trigPin = 24;
-const int echoPin = 25;
+const int trigPin = 36;
+const int echoPin = 34;
 const int US_LED = 26;
 
 // defines variables

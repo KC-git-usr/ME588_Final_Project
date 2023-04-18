@@ -45,7 +45,7 @@
 
 // initialize the library by associating any needed LCD interface pin
 // with the arduino pin number it is connected to
-const int rs = 50, en = 48, d4 = 46, d5 = 44, d6 = 42, d7 = 40;
+const int rs = 40, en = 42, d4 = 44, d5 = 46, d6 = 48, d7 = 50;
 LiquidCrystal lcd(rs, en, d4, d5, d6, d7);
 
 void setup() {
