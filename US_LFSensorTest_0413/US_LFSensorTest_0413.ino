@@ -1,11 +1,10 @@
-//#include <Adafruit_LiquidCrystal.h>
-
 #include <LiquidCrystal.h>
 
 // defines pins numbers
 const int trigPin = 24;
 const int echoPin = 25;
 const int US_LED = 26;
+
 // defines variables
 long duration;
 int distance1;
@@ -13,24 +12,19 @@ int distance;
 
 const int LF1 = A0;
 const int LF2 = A1;
-const int LF_LED = 3;
+const int LF_LED = 27;
 
-//LiquidCrystal lcd(12, 11, 10, 5, 4, 3, 2);
 
 void setup() {
   pinMode(trigPin, OUTPUT); // Sets the trigPin as an Output
   pinMode(echoPin, INPUT); // Sets the echoPin as an Input
   Serial.begin(9600); // Starts the serial communication
-  //lcd.begin(16, 2);
-  
 }
 
 void loop() {
   USDistance();
   LineFollow();
   delay(100);
-
-  
 }
 
 void USDistance(){

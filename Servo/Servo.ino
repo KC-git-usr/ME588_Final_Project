@@ -1,5 +1,13 @@
+#include <Servo.h>
+
+
+const int SERVO_PIN = 7;
+
+Servo myservo;  // create servo object to control a servo
+
+
 void setup() {
-  myservo.attach(9);  // attaches the servo on pin 9 to the servo object
+  myservo.attach(SERVO_PIN);  // attaches the servo pin to the servo object
   Serial.begin(9600);
 }
 

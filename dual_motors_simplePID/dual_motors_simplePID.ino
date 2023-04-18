@@ -7,8 +7,8 @@
 const int ENC_A_pin[] = {2,3};  // Encoder A
 const int ENC_B_pin[] = {4,5};  // Encoder B
 const int PWM_pin[] = {6,11};  // PWM pins
-const int IN_1_pin[] = {8,9};  // In 1
-const int IN_2_pin[] = {7,10};  // In 2
+const int IN_1_pin[] = {31,32};  // In 1
+const int IN_2_pin[] = {30,33};  // In 2
 
 // Globals
 long prevT = 0;
