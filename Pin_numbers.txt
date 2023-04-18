@@ -1,0 +1,20 @@
+// motors
+const int ENC_A_pin[] = {2,3};  // Encoder A
+const int ENC_B_pin[] = {4,5};  // Encoder B
+const int PWM_pin[] = {6,11};  // PWM pins
+const int IN_1_pin[] = {31,32};  // In 1
+const int IN_2_pin[] = {30,33};  // In 2
+
+// US and LF
+const int trigPin = 24;
+const int echoPin = 25;
+const int US_LED = 26;
+const int LF1 = A0;
+const int LF2 = A1;
+const int LF_LED = 27;
+
+// Servo
+const int SERVO_PIN = 7;
+
+// LCD
+const int rs = 50, en = 48, d4 = 46, d5 = 44, d6 = 42, d7 = 40;
