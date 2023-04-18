@@ -4,8 +4,8 @@
 #define NMOTORS 2
 
 // Assigning pin numbers
-const int ENC_A_pin[] = {6,7};  // Encoder A
-const int ENC_B_pin[] = {4,5};  // Encoder B
+const int ENC_A_pin[] = {47,51};  // Encoder A
+const int ENC_B_pin[] = {49,53};  // Encoder B
 const int PWM_pin[] = {2,3};  // PWM pins
 const int IN_1_pin[] = {25,29};  // In 1
 const int IN_2_pin[] = {27,31};  // In 2
