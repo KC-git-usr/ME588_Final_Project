@@ -6,7 +6,7 @@
 #define bounceDelay 30    //Minimum delay before regarding a button as being pressed and debounced
 #define minButtonPress 1  //Number of times the button has to be detected as pressed before the press is considered to be valid
 
-const int buttonPins[] = {2, 3, 4, 5};      // Input pins to use, connect buttons between these pins and 0V
+const int buttonPins[] = {37, 39, 41};      // Input pins to use, connect buttons between these pins and 0V
 uint32_t previousMillis[noOfButtons];       // Timers to time out bounce duration for each button
 uint8_t pressCount[noOfButtons];            // Counts the number of times the button is detected as pressed, when this count reaches minButtonPress button is regared as debounced 
 uint8_t testCount[noOfButtons];             //Test count, incremented once per button press

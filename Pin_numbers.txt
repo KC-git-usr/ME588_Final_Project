@@ -18,3 +18,6 @@ const int SERVO_PIN = 7;
 
 // LCD
 const int rs = 40, en = 42, d4 = 44, d5 = 46, d6 = 48, d7 = 50;
+
+// Buttons
+const int buttonPins[] = {37, 39, 41};
