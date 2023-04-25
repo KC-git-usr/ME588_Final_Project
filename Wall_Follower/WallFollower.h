@@ -34,7 +34,7 @@ public:
   static const int leftEchoPin = 51;
 
   //Buttons
-  static const int noOfButtons = 3;
+  static const int noOfButtons = 2;  // 0 is SG, 1 is color
   static const int bounceDelay = 30;
   static const int minButtonPress = 1;
 
