@@ -3,6 +3,7 @@
 WallFollower wallFollower;
 
 void setup() {
+  Serial.begin(9600);
   wallFollower.setup();
 }
 
