@@ -28,9 +28,6 @@ unsigned long previousTime = 0;
 const int desiredDistance = 20;
 bool startGame = false;
 
-// WallFollower::WallFollower() {
-// }
-
 WallFollower::WallFollower() : lcd(9, 8, 7, 6, 5, 4) {
 }
 
@@ -47,8 +44,7 @@ void WallFollower::setup() {
   for (int i = 0; i < WallFollower::noOfButtons; ++i) {
     pinMode(buttonPins[i], INPUT_PULLUP);
   }
-  // Set up the serial communication
-  Serial.begin(9600);
+  
   startGame = true;
   // Set up the LCD display
   lcd.begin(16, 2);
@@ -98,23 +94,25 @@ void WallFollower::loop() {
 
       // Update the LCD display
       lcd.setCursor(0,0);
-      lcd.print("State: ")
-      lcd.print("Moving Forward")
+      lcd.print("S: ");
+      lcd.print("Moving Forward");
       lcd.setCursor(0, 1);
       lcd.print("F:");
       lcd.print(frontDistance);
-      lcd.print(" L:");
+      lcd.setCursor(7,1);
+      lcd.print("L:");
       lcd.print(leftDistance);
 
     } else if(frontDistance > 2 && frontDistance < 45) {
       // Update the LCD display
       lcd.setCursor(0,0);
-      lcd.print("State: ")
-      lcd.print("Turning")
+      lcd.print("S: ");
+      lcd.print("Turning");
       lcd.setCursor(0, 1);
       lcd.print("F:");
       lcd.print(frontDistance);
-      lcd.print(" L:");
+      lcd.setCursor(7,1);
+      lcd.print("L:");
       lcd.print(leftDistance);
       // Stop
       Serial.println("Stoping");
