@@ -1,5 +1,7 @@
 #include "WallFollower.h"
 
+#define DEBUG true
+
 // Defining time limit
 const unsigned long TIME_LIMIT = 120000; // [ms]
 
@@ -10,227 +12,291 @@ unsigned long time_at_SG = 0;
 // Maximum distance for the ultrasonic sensors (in cm)
 const int maxDistance = 300;
 
+//Moving average array
+int movingAvg[] = {0,0,0,0,0};
+int avgIndx = 0;
+int getFrontDist();
+
+// Button
 const int buttonPins[] = {35, 37};
 uint32_t previousMillis[WallFollower::noOfButtons];
 uint8_t pressCount[WallFollower::noOfButtons];
 uint8_t testCount[WallFollower::noOfButtons];
 
+// Initialize the ultrasonic sensors
+NewPing frontSensor(WallFollower::frontTrigPin, WallFollower::frontEchoPin, maxDistance);
+NewPing leftSensor(WallFollower::leftTrigPin, WallFollower::leftEchoPin, maxDistance);
+NewPing midSensor(WallFollower::midTrigPin, WallFollower::midEchoPin, 80);
 
-WallFollower::WallFollower(): 
-frontSensor(WallFollower::frontTrigPin, WallFollower::frontEchoPin, maxDistance), 
-leftSensor(WallFollower::leftTrigPin, WallFollower::leftEchoPin, 80), 
-lcd(9, 8, 7, 6, 5, 4), 
-encoder1(WallFollower::encoder1PinA, WallFollower::encoder1PinB), 
-encoder2(WallFollower::encoder2PinA, WallFollower::encoder2PinB), 
-pidController(0, 0, 0, 0, 0) {
+// PID controller parameters
+const float Kp = 0.7;
+const float Ki = 0.01;
+const float Kd = 0.2;
+// const float Kp = 1.2;
+// const float Ki = 0.00;
+// const float Kd = 0.00;
+float integral = 0;
+float previousError = 0;
+unsigned long previousTime = 0;
 
-  // Distance per encoder count
-  distancePerCount = 0.5 * 3.14159 * 6.0 / 20.0;
+// Desired distance from the left wall (in cm)
+const int desiredDistance = 27;
+bool startGame = false;
+char colors[] = {'Y', 'G', 'B', 'R'};
+uint8_t color = 0;  // {1, Y}, {2, G}, {3, B}, {4, R}
 
-  // Target speed
-  targetSpeed = 100.0;
-
-  // Maximum speed difference
-  maxSpeedDifference = 50;
-
-  // PID controller
-  Kp = 1.0;
-  Ki = 0.0;
-  Kd = 0.0;
-  pidController.SetOutputLimits(-maxSpeedDifference, maxSpeedDifference);
-  pidController.SetMode(AUTOMATIC);
-  pidController.SetSampleTime(10);
-  pidController.SetTunings(Kp, Ki, Kd);
-
-  // Wall following state
-  wallFollowingState = GO_STRAIGHT;
-
-  // Turn count
-  turnCount = 0;
+WallFollower::WallFollower() : lcd(9, 8, 7, 6, 5, 4) {
 }
 
 void WallFollower::setup() {
-  // Set up the motor pins
-  pinMode(WallFollower::motor1In1, OUTPUT);
-  pinMode(WallFollower::motor1In2, OUTPUT);
-  pinMode(WallFollower::motor1Pwm, OUTPUT);
-  pinMode(WallFollower::motor2In1, OUTPUT);
-  pinMode(WallFollower::motor2In2, OUTPUT);
-  pinMode(WallFollower::motor2Pwm, OUTPUT);
+    // Set up the motor pins
+    pinMode(WallFollower::motor1In1, OUTPUT);
+    pinMode(WallFollower::motor1In2, OUTPUT);
+    pinMode(WallFollower::motor1Pwm, OUTPUT);
+    pinMode(WallFollower::motor2In1, OUTPUT);
+    pinMode(WallFollower::motor2In2, OUTPUT);
+    pinMode(WallFollower::motor2Pwm, OUTPUT);
 
-  //button Setup
-  for (int i = 0; i < WallFollower::noOfButtons; ++i) {
-      pinMode(buttonPins[i], INPUT_PULLUP);
-  }
-
-  // Encoder pins
-  pinMode(WallFollower::encoder1PinA, INPUT_PULLUP);
-  pinMode(WallFollower::encoder1PinB, INPUT_PULLUP);
-  pinMode(WallFollower::encoder2PinA, INPUT_PULLUP);
-  pinMode(WallFollower::encoder2PinB, INPUT_PULLUP);
-
-  // LCD display
-  lcd.begin(16, 2);
-  lcd.print("Wall Follower");
-  lcd.setCursor(0,1);
-  lcd.print(colors[color]);
-
-  // Wait for the LCD display to initialize
-  delay(1000);
-}
-
-void WallFollower::loop() {
-  // Read the ultrasonic sensor distances
-  int frontDistance = frontSensor.ping_cm();
-  int leftDistance = leftSensor.ping_cm();
-
-  // Determine the wall following state
-  if (frontDistance < 10 || leftDistance < 10) {
-    wallFollowingState = TURN_RIGHT;
-  }
-
-  // Handle the wall following state
-  switch (wallFollowingState) {
-    case GO_STRAIGHT:
-      goStraight();
-      break;
-    case TURN_RIGHT:
-      turnRight();
-      break;
-  }
-}
-
-void WallFollower::goStraight() {
-  // Reset the encoder counts
-  encoder1.write(0);
-  encoder2.write(0);
-
-  // Set the motor speeds to the target speed
-  int leftSpeed = targetSpeed;
-  int rightSpeed = targetSpeed;
-
-  // Loop until a wall is detected
-  while (true) {
-    // Read the ultrasonic sensor distances
-    int frontDistance = frontSensor.ping_cm();
-    int leftDistance = leftSensor.ping_cm();
-
-    // Determine the wall following state
-    if (frontDistance < 10 || leftDistance < 10) {
-      wallFollowingState = TURN_RIGHT;
-      break;
+    //button Setup
+    for (int i = 0; i < WallFollower::noOfButtons; ++i) {
+        pinMode(buttonPins[i], INPUT_PULLUP);
     }
 
-    // Read the encoder counts
-    long encoder1Count = encoder1.read();
-    long encoder2Count = encoder2.read();
-
-    // Calculate the average encoder count
-    long averageEncoderCount = (encoder1Count + encoder2Count) / 2;
-
-    // Calculate the distance traveled
-    long distanceTraveled = averageEncoderCount * distancePerCount;
-
-    // Calculate the speed difference using the encoder counts and PID control
-    long speedDifference = calculateSpeedDifference(encoder1Count, encoder2Count);
-
-    // Set the motor speeds based on the speed difference
-    setMotorSpeeds(leftSpeed - speedDifference, rightSpeed + speedDifference);
-
-    // Update the LCD display
-    updateLCD(distanceTraveled);
-  }
-
-  // Stop the motors
-  setMotorSpeeds(0, 0);
+    // Set up the LCD display
+    lcd.begin(16, 2);
+    lcd.print("Wall Follower");
+    lcd.setCursor(0,1);
+    lcd.print(colors[color]);
 }
 
-void WallFollower::turnRight() {
-  // Reset the encoder counts
-  encoder1.write(0);
-  encoder2.write(0);
+void debounce();
+void CheckTime();
+void StartTimer();
 
-  // Set the motor speeds to turn right
-  int leftSpeed = targetSpeed;
-  int rightSpeed = -targetSpeed;
+void WallFollower::loop() {
 
-  // Loop until the robot has turned 90 degrees
-  long angleTurned = 0;
-  while (angleTurned < 90) {
-    // Read the encoder counts
-    long encoder1Count = encoder1.read();
-    long encoder2Count = encoder2.read();
+    // Function to determine value of variable SG
+    time_since_prgm_start = millis();
+    CheckTime();
 
-    // Calculate the average encoder count
-    long averageEncoderCount = (encoder1Count + encoder2Count) / 2;
+    //get button presses
+    debounce();
 
-    // Calculate the angle turned
-    angleTurned = averageEncoderCount * distancePerCount / 6.0 * 360.0;
+    if (startGame == false){
+        lcd.setCursor(0,1);
+        lcd.print(colors[color]);
+    }
 
-    // Set the motor speeds to turn right
-    setMotorSpeeds(leftSpeed, rightSpeed);
+    if(startGame==true){
 
-    // Update the LCD display
-    updateLCD(angleTurned);
-  }
+        // Read the distance from the ultrasonic sensors
+        long frontDistance = frontSensor.ping_cm();
+        long midDistance = midSensor.ping_cm();
+        long leftDistance = leftSensor.ping_cm();
+        
+        // Calculate the time since the last loop iteration
+        unsigned long currentTime = millis();
+        float deltaTime = (currentTime - previousTime) / 1000.0;
+        previousTime = currentTime;
 
-  // Stop the motors
-  setMotorSpeeds(0, 0);
+        // Calculate the PID controller output
+        float error = desiredDistance - leftDistance;
+        integral += error * deltaTime;
+        float derivative = (error - previousError) / deltaTime;
+        float output = Kp * error + Ki * integral + Kd * derivative;
+        previousError = error;
 
-  // Increment the turn count
-  turnCount++;
+        // Control the motors based on the PID output
+        if (frontDistance > 30) {
+            // Move forward and adjust the speed based on the PID output
+            int baseSpeed = 80;
+            int motor1Speed = baseSpeed + output;
+            int motor2Speed = baseSpeed - output;
 
-  // Determine the wall following state
-  if (turnCount < 4) {
-    wallFollowingState = GO_STRAIGHT;
-  } else {
-    wallFollowingState = TURN_RIGHT;
-    turnCount = 0;
-  }
+            // Constrain the motor speeds
+            motor1Speed = constrain(motor1Speed, 0, 100);
+            motor2Speed = constrain(motor2Speed, 0, 100);
+
+            // Set the motor speeds and directions
+            // Serial.println("Moving forward");
+            digitalWrite(WallFollower::motor1In1, HIGH);
+            digitalWrite(WallFollower::motor1In2, LOW);
+            analogWrite(WallFollower::motor1Pwm, motor1Speed);
+            digitalWrite(WallFollower::motor2In1, HIGH);
+            digitalWrite(WallFollower::motor2In2, LOW);
+            analogWrite(WallFollower::motor2Pwm, motor2Speed);
+
+            // Update the LCD display
+            lcd.setCursor(0,0);
+            lcd.print("S: ");
+            lcd.print("Moving Forward");
+             lcd.setCursor(0,1);
+            lcd.print("F:");
+            lcd.print("    ");
+            lcd.setCursor(2, 1);
+            lcd.print(frontDistance);
+            lcd.setCursor(7,1);
+            lcd.print("M:");
+            lcd.print("    ");
+            lcd.setCursor(9, 1);
+            lcd.print(midDistance);
+            lcd.setCursor(13,1);
+            lcd.print("L:");
+            lcd.print("    ");
+            lcd.setCursor(15, 1);
+            lcd.print(leftDistance);
+
+        } 
+        else if(frontDistance <= 30 ) {
+            // Update the LCD display
+            lcd.setCursor(0,0);
+            lcd.print("S: ");
+            lcd.print("               ");
+            lcd.setCursor(3,0);
+            lcd.print("Turning");
+            lcd.setCursor(0,1);
+            lcd.print("F:");
+            lcd.print("    ");
+            lcd.setCursor(2, 1);
+            lcd.print(frontDistance);
+            lcd.setCursor(7,1);
+            lcd.print("M:");
+            lcd.print("    ");
+            lcd.setCursor(9, 1);
+            lcd.print(midDistance);
+            lcd.setCursor(13,1);
+            lcd.print("L:");
+            lcd.print("    ");
+            lcd.setCursor(15, 1);
+            lcd.print(leftDistance);
+            
+            // Stop
+            digitalWrite(WallFollower::motor1In1, LOW);
+            digitalWrite(WallFollower::motor1In2, LOW);
+            analogWrite(WallFollower::motor1Pwm, 0);
+            digitalWrite(WallFollower::motor2In1, LOW);
+            digitalWrite(WallFollower::motor2In2, LOW);
+            analogWrite(WallFollower::motor2Pwm, 0);
+
+            delay(500);
+
+            //Turn
+            while(frontDistance < 30 || (midDistance < 18 && midDistance > 0)){
+                digitalWrite(WallFollower::motor1In1, HIGH);
+                digitalWrite(WallFollower::motor1In2, LOW);
+                analogWrite(WallFollower::motor1Pwm, 80);
+                digitalWrite(WallFollower::motor2In1, LOW);
+                digitalWrite(WallFollower::motor2In2, HIGH);
+                analogWrite(WallFollower::motor2Pwm, 80);
+
+                frontDistance = frontSensor.ping_cm();
+                midDistance = midSensor.ping_cm();
+
+                if (DEBUG) {
+                    Serial.print("Turning   ");
+                    Serial.print(frontDistance);
+                    Serial.print("  ");
+                    Serial.println(midDistance);
+                }
+
+                lcd.setCursor(0,0);
+                lcd.print("S: ");
+                lcd.print("               ");
+                lcd.setCursor(3,0);
+                lcd.print("Turning");
+                lcd.setCursor(0,1);
+                lcd.print("F:");
+                lcd.print("    ");
+                lcd.setCursor(2, 1);
+                lcd.print(frontDistance);
+                lcd.setCursor(7,1);
+                lcd.print("M:");
+                lcd.print("    ");
+                lcd.setCursor(9, 1);
+                lcd.print(midDistance);
+                lcd.setCursor(13,1);
+                lcd.print("L:");
+                lcd.print("    ");
+                lcd.setCursor(15, 1);
+                lcd.print(leftDistance);
+            }
+
+            // Stop
+            Serial.println("Stoping");
+            digitalWrite(WallFollower::motor1In1, LOW);
+            digitalWrite(WallFollower::motor1In2, LOW);
+            analogWrite(WallFollower::motor1Pwm, 0);
+            digitalWrite(WallFollower::motor2In1, LOW);
+            digitalWrite(WallFollower::motor2In2, LOW);
+            analogWrite(WallFollower::motor2Pwm, 0);
+
+        }
+
+        if (DEBUG == true) {
+            Serial.print("FD: ");
+            Serial.print(frontDistance);
+            Serial.print(" MD: ");
+            Serial.print(midDistance);
+            Serial.print(" LD: ");
+            Serial.print(leftDistance);
+            Serial.print(" O: ");
+            Serial.println(output);
+        }    
+    }
 }
 
-long WallFollower::calculateSpeedDifference(long encoder1Count, long encoder2Count) {
-  // Calculate the difference between the encoder counts
-  long countDifference = encoder1Count - encoder2Count;
-
-  // Calculate the speed difference using the PID control algorithm
-  double speedDifference = pidController.Compute(countDifference);
-
-  // Convert the speed difference to an integer value
-  int speedDifferenceInt = (int)speedDifference;
-
-  // Limit the speed difference to the maximum value
-  if (speedDifferenceInt > maxSpeedDifference) {
-    speedDifferenceInt = maxSpeedDifference;
-  } else if (speedDifferenceInt < -maxSpeedDifference) {
-    speedDifferenceInt = -maxSpeedDifference;
-  }
-
-  // Return the speed difference
-  return speedDifferenceInt;
+//Button debounce
+void debounce() {
+    uint8_t i;
+    uint32_t currentMillis = millis();
+    for (i = 0; i < WallFollower::noOfButtons; ++i) {
+        if (digitalRead(buttonPins[i])){            //Input is high, button not pressed or in the middle of bouncing and happens to be high
+            previousMillis[i] = currentMillis;        //Set previousMillis to millis to reset timeout
+            pressCount[i] = 0;                        //Set the number of times the button has been detected as pressed to 0
+        }
+        else if (currentMillis - previousMillis[i] > WallFollower::bounceDelay) {
+            previousMillis[i] = currentMillis;        //Set previousMillis to millis to reset timeout
+            ++pressCount[i];
+            if (pressCount[0] == WallFollower::minButtonPress) {
+                startGame = true;                             //Button has been debounced. Set SG to true
+                StartTimer();
+                pressCount[0] = 0;
+            }
+            if (pressCount[1] == WallFollower::minButtonPress) {  // Toggle the color
+                color++;
+                if(color == 4)
+                    color = 0;
+            }
+        }
+    }
 }
 
-void WallFollower::setMotorSpeeds(int leftSpeed, int rightSpeed) {
-  // Set the motor speeds based on the input values
-  analogWrite(WallFollower::motor1Pwm, abs(leftSpeed));
-  analogWrite(WallFollower::motor2Pwm, abs(rightSpeed));
-  digitalWrite(WallFollower::motor1In1, leftSpeed > 0 ? HIGH : LOW);
-  digitalWrite(WallFollower::motor1In2, leftSpeed > 0 ? LOW : HIGH);
-  digitalWrite(WallFollower::motor2In1, rightSpeed > 0 ? HIGH : LOW);
-  digitalWrite(WallFollower::motor2In2, rightSpeed > 0 ? LOW : HIGH);
+
+void StartTimer() {
+    /*
+      Function to start our game timer
+    */
+    time_at_SG = millis(); // record curr time to use as reference zero
 }
 
-void WallFollower::updateLCD(long distanceTraveled) {
-  // Update the LCD display with the distance traveled or angle turned
-  lcd.clear();
-  lcd.setCursor(0, 0);
-  if (wallFollowingState == GO_STRAIGHT) {
-    lcd.print("Distance: ");
-    lcd.print(distanceTraveled);
-    lcd.print(" cm");
-  } else {
-    lcd.print("Angle: ");
-    lcd.print(distanceTraveled);
-    lcd.print(" deg");
-  }
+
+void CheckTime() {
+    /*
+      Function to determine value of variable SG
+    */
+    if((time_at_SG > 0) && ((time_since_prgm_start - time_at_SG) >= TIME_LIMIT)) { // exceeding 2 min limit
+        startGame = false;
+//        lcd.clear();
+//        lcd.print("TIME UP!!!");
+        Serial.println("TIME UP!!!");
+    } else if((time_at_SG == 0) && (startGame == false)){ // timer not started yet and input SG is still 0
+        startGame = false;
+    }
 }
+
+// int getFrontDist(){
+//   long frontDist = frontSensor.ping_cm();
+//   movingAvg[avgIndx++] = frontDist;
+//   if(avgIndx == 5) {avgIndx = 0;}
+//   return (int((movingAvg[0] + movingAvg[1] + movingAvg[2]+ movingAvg[3] + movingAvg[4]) / 5));
+// }
