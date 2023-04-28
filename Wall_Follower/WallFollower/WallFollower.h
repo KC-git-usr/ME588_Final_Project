@@ -3,6 +3,7 @@
 
 #include <Arduino.h>
 #include <NewPing.h>
+#include <Encoder.h>
 #include <LiquidCrystal.h>
 
 class WallFollower {
@@ -31,20 +32,20 @@ public:
   static const int frontEchoPin = 34;
   static const int leftTrigPin = 53;
   static const int leftEchoPin = 51;
+  static const int midTrigPin = 15;
+  static const int midEchoPin = 14;
 
   //Buttons
-  static const int noOfButtons = 2;  // 0 is SG, 1 is color
+  static const int noOfButtons = 3;
   static const int bounceDelay = 30;
   static const int minButtonPress = 1;
 
+  //IR Digital sensor
+  static const int irsensor = 46;
 
-  // LiquidCrystal LCD display pins
-  // const int rs = 12;
-  // const int en = 11;
-  // const int d4 = 5;
-  // const int d5 = 4;
-  // const int d6 = 3;
-  // const int d7 = 2;
+  //LF sensor pins
+  static const int LF1 = A0;
+  static const int LF2 = A1;
 
 };
 
